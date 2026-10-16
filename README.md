@@ -4,18 +4,18 @@ Ghi âm (hoặc upload file) → Speech-to-Text (PhoWhisper) → Tóm tắt bằ
 
 ## Cấu trúc & phân công
 
-| Thư mục / file | Nội dung | Phụ trách |
+| Thư mục / file | Nội dung |
 |---|---|---|
-| `asr/recorder.py` | Ghi âm từ mic | A |
-| `asr/transcriber.py` | PhoWhisper: audio → transcript | A |
-| `nlp/prompts.py` | Prompt + JSON schema biên bản | B |
-| `nlp/summarizer.py` | Gọi Gemini/OpenAI | B |
-| `nlp/formatter.py` | JSON → biên bản văn bản | B |
-| `backend/`, `frontend/` | API, giao diện, database | C |
-| `config.py` | Cấu hình chung (model, sample rate...) | cả nhóm |
-| `main.py` | Chạy pipeline từ dòng lệnh | cả nhóm |
-| `docs/` | Slide, báo cáo, bảng so sánh ASR | cả nhóm |
-| `data/samples/` | Audio / transcript mẫu để test | cả nhóm |
+| `asr/recorder.py` | Ghi âm từ mic |
+| `asr/transcriber.py` | PhoWhisper: audio → transcript | 
+| `nlp/prompts.py` | Prompt + JSON schema biên bản |
+| `nlp/summarizer.py` | Gọi Gemini/OpenAI | 
+| `nlp/formatter.py` | JSON → biên bản văn bản | 
+| `backend/`, `frontend/` | API, giao diện, database | 
+| `config.py` | Cấu hình chung (model, sample rate...) |
+| `main.py` | Chạy pipeline từ dòng lệnh |
+| `docs/` | Slide, báo cáo, bảng so sánh ASR | 
+| `data/samples/` | Audio / transcript mẫu để test |
 
 ## Cài đặt
 
