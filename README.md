@@ -5,7 +5,7 @@ Ghi âm (hoặc upload file) → Speech-to-Text (PhoWhisper) → Tóm tắt bằ
 ## Cấu trúc & phân công
 
 | Thư mục / file | Nội dung |
-|---|---|---|
+|---|---|
 | `asr/recorder.py` | Ghi âm từ mic |
 | `asr/transcriber.py` | PhoWhisper: audio → transcript | 
 | `nlp/prompts.py` | Prompt + JSON schema biên bản |
