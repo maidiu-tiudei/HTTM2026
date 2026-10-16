@@ -1,0 +1,16 @@
+# Ghi âm + xử lý audio
+sounddevice
+numpy
+soundfile
+librosa
+
+# ASR (PhoWhisper)
+transformers
+torch
+
+# Tóm tắt (dùng Gemini; openai chỉ cần nếu muốn dùng GPT)
+google-genai
+openai
+
+# Đọc API key từ file .env
+python-dotenv
