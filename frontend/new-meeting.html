@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cuộc họp mới | TinaMeetNote</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app"></div>
+<script src="js/common.js"></script>
+<script>
+layout('meetings.html', 'Chi tiết cuộc họp');
+document.getElementById('view').innerHTML = `
+<a class="back" href="meetings.html">${ic('back', 18)} Quay lại danh sách</a>
+<div class="new">
+  <div class="l"><span class="eyebrow">Không gian mới</span>
+    <h2>Bắt đầu bằng một cuộc trò chuyện.</h2>
+    <p>Ghi âm trực tiếp hoặc tải audio lên. Dịch vụ STT sẽ tạo transcript.</p>
+    <button class="opt on" onclick="pick('live')"><div class="ic">${ic('mic', 24)}</div><div><b>Ghi âm trực tiếp</b><span>Sử dụng microphone của trình duyệt</span></div></button>
+    <button class="opt" onclick="pick('file')"><div class="ic">${ic('up', 24)}</div><div><b>Tải audio</b><span>MP3, WAV, M4A, MP4, OGG</span></div></button>
+    <input type="file" id="f" accept="audio/*,video/mp4,.mp3,.wav,.m4a,.mp4,.ogg" hidden onchange="fileChosen(this)">
+    <div id="src"></div></div>
+  <div class="r"><h3>Thông tin cuộc họp</h3>
+    <label for="t">Tiêu đề cuộc họp</label>
+    <input class="in" id="t" placeholder="Ví dụ: Lập kế hoạch quý 4" oninput="chk()">
+    <label for="d">Mô tả</label>
+    <textarea class="in" id="d" placeholder="Cuộc họp này nói về điều gì?"></textarea>
+    <label>Người tham gia</label>
+    <div class="in" style="display:flex;gap:12px;align-items:center">${ic('users')} System Admin</div>
+    <div class="acts"><a class="btn out" href="meetings.html">Hủy</a>
+      <button class="btn pri" id="ok" disabled onclick="createMeeting()">Tạo cuộc họp</button></div></div>
+</div>`;
+
+let rec = null, chunks = [], audio = null;
+const setSrc = t => { document.getElementById('src').textContent = t; };
+const chk = () => { document.getElementById('ok').disabled = !document.getElementById('t').value.trim(); };
+
+function pick(mode) {
+  document.querySelectorAll('.opt').forEach((b, i) => b.classList.toggle('on', i === (mode === 'live' ? 0 : 1)));
+  if (mode === 'file') return document.getElementById('f').click();
+  if (rec && rec.state === 'recording') { rec.stop(); return; }
+  navigator.mediaDevices.getUserMedia({audio: true}).then(s => {
+    chunks = []; rec = new MediaRecorder(s);
+    rec.ondataavailable = e => chunks.push(e.data);
+    rec.onstop = () => {
+      audio = new File(chunks, 'recording.webm', {type: rec.mimeType});
+      s.getTracks().forEach(t => t.stop()); setSrc('Đã ghi âm xong.');
+    };
+    rec.start(); setSrc('Đang ghi âm… bấm “Ghi âm trực tiếp” lần nữa để dừng.');
+  }).catch(() => setSrc('Không mở được microphone. Hãy cho phép trình duyệt dùng micro.'));
+}
+function fileChosen(input) {
+  if (input.files[0]) { audio = input.files[0]; setSrc('Đã chọn: ' + audio.name); }
+}
+async function createMeeting() {
+  if (!audio) return setSrc('Hãy ghi âm hoặc chọn file audio trước.');
+  const btn = document.getElementById('ok');
+  btn.disabled = true; btn.textContent = 'Đang gửi…';
+  const fd = new FormData();
+  fd.append('title', document.getElementById('t').value.trim());
+  fd.append('description', document.getElementById('d').value);
+  fd.append('file', audio);
+  try {
+    const r = await fetch(API + '/api/meetings', {method: 'POST', body: fd});
+    if (!r.ok) throw new Error();
+    location.href = 'meeting.html?id=' + (await r.json()).id;
+  } catch (e) {
+    setSrc('Không kết nối được backend. Hãy chạy: uvicorn backend.app:app --port 8000');
+    btn.disabled = false; btn.textContent = 'Tạo cuộc họp';
+  }
+}
+</script>
+</body>
+</html>

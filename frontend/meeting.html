@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Chi tiết cuộc họp | TinaMeetNote</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app"></div>
+<script src="js/common.js"></script>
+<script>
+layout('meetings.html', 'Chi tiết cuộc họp');
+const id = new URLSearchParams(location.search).get('id');
+async function show() {
+  const view = document.getElementById('view');
+  let m;
+  try {
+    const r = await fetch(`${API}/api/meetings/${id}`);
+    if (!r.ok) throw new Error();
+    m = await r.json();
+  } catch (e) {
+    view.innerHTML = '<div class="card empty"><b>Không tải được cuộc họp</b>Kiểm tra backend đã chạy chưa.</div>';
+    return;
+  }
+  const [label, cls] = STATUS[m.status] || STATUS.error;
+  let body;
+  if (m.status === 'processing') body = '<div class="card empty"><b>AI đang xử lý…</b>Trang tự cập nhật. Lần đầu có thể mất vài phút.</div>';
+  else if (m.status === 'error') body = `<div class="card"><h3>Có lỗi khi xử lý</h3><pre class="txt">${esc(m.error)}</pre></div>`;
+  else body = `<div class="card"><h3>Biên bản</h3><pre class="txt">${esc(m.minutes)}</pre></div>
+    <div style="height:26px"></div><div class="card"><h3>Transcript</h3><pre class="txt">${esc(m.transcript)}</pre></div>`;
+  view.innerHTML = `<a class="back" style="margin:0 0 26px" href="meetings.html">${ic('back', 18)} Quay lại danh sách</a>
+    <h2 class="h1" style="margin-top:0">${esc(m.title)}</h2>
+    <p style="margin-bottom:26px"><span class="badge ${cls}">${label}</span> <span style="color:var(--mute)">&nbsp;${fmtDate(m.created)} · ${fmtDur(m.sec)}</span></p>${body}`;
+  if (m.status === 'processing') setTimeout(show, 3000);
+}
+show();
+</script>
+</body>
+</html>
