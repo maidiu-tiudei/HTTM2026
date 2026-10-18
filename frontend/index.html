@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tổng quan | TinaMeetNote</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app"></div>
+<script src="js/common.js"></script>
+<script>
+layout('index.html', 'Tổng quan');
+loadMeetings().then(() => {
+  const total = meetings.reduce((a, m) => a + (m.sec || 0), 0);
+  const processing = meetings.filter(m => m.status === 'processing').length;
+  const done = meetings.filter(m => m.status === 'done').length;
+  const bars = Array.from({length: 12}, (_, i) => `<i class="${i === 4 ? 't' : ''}"></i>`).join('');
+  document.getElementById('view').innerHTML = warn() + `
+  <div class="grid">
+    <div class="hero"><span class="eyebrow">Hôm nay</span>
+      <h2>Biến mọi cuộc trò chuyện thành hành động rõ ràng.</h2>
+      <p>Ghi lại quyết định, việc cần làm và ngữ cảnh quan trọng mà không làm gián đoạn cuộc họp.</p>
+      <a class="btn w" href="new-meeting.html">${ic('plus')} Cuộc họp mới</a>
+      <a class="btn g" href="meetings.html">Xem cuộc họp ${ic('arr', 18)}</a></div>
+    <div class="pulse"><span class="eyebrow">Tháng này</span><h3>Nhịp độ cuộc họp</h3>
+      <div class="bars">${bars}</div><small>${meetings.length} cuộc họp đã ghi nhận</small></div>
+  </div>
+  <div class="stats">
+    <div class="card"><div class="stat">Tổng cuộc họp ${ic('chk')}</div><b>${meetings.length}</b><small>${done} cuộc họp sẵn sàng xem</small></div>
+    <div class="card"><div class="stat">Thời gian ghi âm ${ic('clock')}</div><b>${Math.floor(total / 3600)}h ${Math.floor(total % 3600 / 60)}m</b><small>Trên tất cả cuộc họp</small></div>
+    <div class="card"><div class="stat">AI đang xử lý ${ic('bolt')}</div><b>${processing}</b><small>${processing ? 'Đang chờ trong hàng đợi' : 'Hàng đợi đã trống'}</small></div>
+  </div>
+  <div class="card big"><div class="top"><div><h3>Cuộc họp gần đây</h3><small>Tiếp tục công việc đang dang dở.</small></div>
+    <a class="link" href="meetings.html">Xem tất cả</a></div>${meetingTable(meetings.slice(-3).reverse())}</div>`;
+});
+</script>
+</body>
+</html>

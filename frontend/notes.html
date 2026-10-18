@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ghi chú | TinaMeetNote</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app"></div>
+<script src="js/common.js"></script>
+<script>
+layout('notes.html', 'Ghi chú');
+document.getElementById('view').innerHTML = `
+<span class="eyebrow">Kho kiến thức</span><h2 class="h1">Ghi chú</h2>
+<p style="color:var(--mute)">Ghi chú của bạn và nội dung AI được phân biệt rõ ràng.</p>
+<div class="search">${ic('search')}<input placeholder="Tìm tất cả ghi chú" aria-label="Tìm ghi chú"></div>
+<div class="card empty"><div class="ic">${ic('edit', 24)}</div><b>Không tìm thấy ghi chú</b>
+Ghi chú cuộc họp và quan sát hữu ích từ AI sẽ xuất hiện tại đây.</div>`;
+</script>
+</body>
+</html>
