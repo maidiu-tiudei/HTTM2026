@@ -10,7 +10,7 @@ except ImportError:
 # ---- Ghi âm / ASR (Người A) ----
 SAMPLE_RATE = 16000          # PhoWhisper cần 16kHz mono
 CHANNELS = 1
-ASR_MODEL_SIZE = "small"     # tiny / base / small / medium / large
+ASR_MODEL_SIZE = "tiny"     # tiny / base / small / medium / large
 ASR_MODELS = {
     "tiny": "vinai/PhoWhisper-tiny",
     "base": "vinai/PhoWhisper-base",
@@ -21,9 +21,13 @@ ASR_MODELS = {
 
 # ---- Tóm tắt / NLP (Người B) ----
 # Google đổi model khá nhanh: nếu báo 404 "model no longer available", sửa danh sách này.
-GEMINI_MODELS = ["gemini-3.6-flash", "gemini-3.1-flash-lite", "gemini-3.8-flash"]
-OPENAI_MODEL = "gpt-4o-mini"
-MAX_RETRIES = 3
+GEMINI_MODELS = [
+    "gemini-3.5-flash-lite",
+    "gemini-3.1-flash-lite"
+]
+
+MAX_RETRIES = 1
+
 
 # ---- Đầu ra ----
 OUTPUT_DIR = "meeting_outputs"

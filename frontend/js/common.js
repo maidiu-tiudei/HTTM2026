@@ -17,7 +17,8 @@ const NAV = [
   ['index.html', 'Tổng quan', 'home'], ['meetings.html', 'Cuộc họp', 'cal'], ['notes.html', 'Ghi chú', 'edit'],
   ['settings.html', 'Cài đặt', 'gear'], ['users.html', 'Người dùng', 'users']
 ];
-const STATUS = {done: ['Hoàn thành', ''], processing: ['Đang xử lý', 'wait'], error: ['Lỗi', 'err']};
+const STATUS = {done: ['Đã phiên âm', ''], processing: ['Đang phiên âm', 'wait'], error: ['Lỗi', 'err']};
+const meetingStatus = m => m.status === 'done' ? (m.summary_status === 'processing' ? ['Đang tạo biên bản','wait'] : m.summary_status === 'error' || (!m.summary && m.minutes && m.minutes.startsWith('Chưa có')) ? ['Chưa có biên bản','err'] : m.summary ? ['Hoàn thành',''] : ['Đã phiên âm','']) : (STATUS[m.status] || STATUS.error);
 
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
 const fmtDur = s => !s ? '—' : s < 60 ? `${s}s` : `${Math.round(s / 60)} min`;
@@ -51,7 +52,7 @@ function layout(active, title) {
 function meetingTable(list) {
   if (!list.length) return '<div class="empty">Chưa có cuộc họp nào. Bấm “Cuộc họp mới” để bắt đầu.</div>';
   const rows = list.map(m => {
-    const [label, cls] = STATUS[m.status] || STATUS.error;
+    const [label, cls] = meetingStatus(m);
     return `<tr><td><b><a href="meeting.html?id=${m.id}">${esc(m.title)}</a></b></td><td>${fmtDate(m.created)}</td>
     <td><span class="who">${ic('users', 16)} ${m.people}</span></td><td>${fmtDur(m.sec)}</td>
     <td><span class="badge ${cls}">${label}</span></td><td>${ic('arr', 18)}</td></tr>`;

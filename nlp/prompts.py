@@ -22,7 +22,10 @@ Hãy đọc kỹ và trả về DUY NHẤT một JSON object theo đúng schema 
   ]
 }}
 
-Nếu transcript không đủ thông tin cho một trường nào đó, điền "Chưa rõ" thay vì bịa đặt.
+QUY TẮC BẮT BUỘC:
+- Không tự suy đoán thời lượng từ transcript; nếu không có dữ liệu hãy để "Chưa rõ".
+- Chỉ ghi quyết định, người phụ trách, mốc thời gian thật sự được đề cập. Không tự thêm.
+- Nếu transcript không đủ thông tin cho một trường nào đó, điền "Chưa rõ" thay vì bịa đặt.
 
 TRANSCRIPT:
 \"\"\"

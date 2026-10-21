@@ -75,3 +75,29 @@ textarea.in{height:140px;resize:vertical}
 .card h3{font-size:22px;margin-bottom:14px}
 pre.txt{white-space:pre-wrap;font:inherit;line-height:1.7;color:var(--ink)}
 td a:hover{color:var(--blue)}
+/* TinaMeetNote: biên bản dạng tài liệu + transcript có dấu câu */
+.minutes-sheet{max-width:1120px;margin:auto;color:var(--ink);line-height:1.75}
+.minutes-title{text-align:center;border-bottom:1px solid var(--line);padding:10px 12px 24px;margin-bottom:26px}
+.minutes-title>span{font-size:12px;letter-spacing:.2em;font-weight:800;color:var(--blue)}
+.minutes-title h2{font-size:28px;line-height:1.3;margin:8px 0;font-weight:800}
+.minutes-title p,.muted,.transcript-note{color:var(--mute);font-size:13px}
+.minutes-info{display:grid;grid-template-columns:1fr 1fr;gap:15px;background:#f6f8fc;border-radius:14px;padding:22px;margin-bottom:26px}
+.minutes-info div{display:flex;flex-direction:column;gap:3px}
+.minutes-info b{color:var(--mute);font-size:12px;text-transform:uppercase;letter-spacing:.06em}
+.minutes-info span{font-size:15px;font-weight:600}
+.minutes-info .full{grid-column:1/-1}
+.minutes-section{margin:30px 0}
+.minutes-section>h3{font-size:17px;letter-spacing:.01em;border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:16px;color:var(--navy)}
+.minutes-section p{font-size:15px;line-height:1.85}
+.minutes-topic{margin:0 0 18px}.minutes-topic h4{font-size:15px;margin-bottom:8px}
+.minutes-list{padding-left:24px;margin:6px 0}.minutes-list li{padding:3px 0;font-size:15px}
+.minutes-table-wrap{overflow-x:auto}.minutes-table th{padding:12px 14px;white-space:nowrap}
+.minutes-table td{padding:12px 14px;color:var(--ink);font-size:14px;vertical-align:top;overflow-wrap:anywhere}
+.minutes-table td:first-child{white-space:nowrap}
+.transcript-head{display:flex;justify-content:space-between;gap:15px;align-items:center;flex-wrap:wrap}
+.tab-pair{display:flex;gap:4px;background:#f0f3f9;padding:4px;border-radius:10px}
+.tab-btn{padding:9px 13px;border-radius:8px;font-size:13px;font-weight:700;color:var(--mute)}
+.tab-btn.selected{background:#fff;color:var(--blue);box-shadow:0 1px 4px #18214018}
+.transcript-note{margin:0 0 16px}
+.readable-transcript{white-space:pre-wrap;overflow-wrap:anywhere;line-height:2;font-size:15px}
+@media(max-width:650px){.minutes-info{grid-template-columns:1fr}.minutes-title h2{font-size:22px}}

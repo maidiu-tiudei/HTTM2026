@@ -9,7 +9,7 @@ from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, UploadF
 from fastapi.middleware.cors import CORSMiddleware
 
 from . import storage
-from .pipeline import process_meeting, warm_up
+from .pipeline import process_meeting, warm_up, retry_meeting_summary
 
 
 @asynccontextmanager
@@ -46,3 +46,17 @@ async def create_meeting(bg: BackgroundTasks, title: str = Form(...), descriptio
     storage.add_meeting(meeting)
     bg.add_task(process_meeting, mid, src)  # xử lý ở nền, trả lời giao diện ngay
     return meeting
+
+@app.post("/api/meetings/{mid}/retry-summary")
+def retry_summary(mid: str, bg: BackgroundTasks):
+    """Tóm tắt lại từ transcript đã lưu, không chạy ASR."""
+    m = storage.get_meeting(mid)
+    if not m:
+        raise HTTPException(404, "Không tìm thấy cuộc họp")
+    if not (m.get("transcript") or "").strip():
+        raise HTTPException(409, "Cuộc họp chưa có transcript để tạo biên bản")
+    if m.get("summary_status") == "processing" or m.get("status") == "processing":
+        raise HTTPException(409, "Cuộc họp đang được xử lý")
+    storage.update_meeting(mid, summary_status="processing", summary_error=None)
+    bg.add_task(retry_meeting_summary, mid)
+    return {"id": mid, "summary_status": "processing"}

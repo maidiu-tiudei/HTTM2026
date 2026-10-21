@@ -34,31 +34,45 @@ def to_wav(src, wav):
         raise RuntimeError("Không đọc được file audio: " + r.stderr.decode(errors="replace")[-300:])
 
 
+def retry_meeting_summary(mid):
+    """Tạo biên bản từ transcript đã lưu, không xử lý âm thanh lần nữa."""
+    from .storage import get_meeting
+    meeting = get_meeting(mid)
+    if not meeting or not (meeting.get("transcript") or "").strip():
+        update_meeting(mid, summary_status="error", summary_error="Không có transcript để tóm tắt")
+        return
+    transcript = meeting["transcript"]
+    try:
+        summary = summarize_transcript(transcript)
+        if not isinstance(summary, dict) or not summary:
+            raise RuntimeError("Gemini không trả về biên bản hợp lệ. Kiểm tra GEMINI_API_KEY.")
+        minutes = format_bien_ban(summary)
+        ts = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+        (OUT / f"bienban_{ts}.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
+        (OUT / f"bienban_{ts}.txt").write_text(minutes, encoding="utf-8")
+        update_meeting(mid, status="done", summary_status="done", summary_error=None,
+                       summary=summary, minutes=minutes,
+                       transcript_clean=summary.get("transcript_chinh_sua"))
+    except Exception as exc:
+        print(f"[Gemini] Không tạo được biên bản cho {mid}: {exc}")
+        update_meeting(mid, status="done", summary_status="error",
+                       summary_error="Dịch vụ tóm tắt tạm thời không khả dụng. Hãy thử lại sau.",
+                       summary=None, minutes=None, transcript_clean=None)
+
+
 def process_meeting(mid, src):
     try:
         wav = UPLOADS / f"{mid}.wav"
         to_wav(src, wav)
         update_meeting(mid, sec=round(sf.info(str(wav)).duration))
-
         with _run_lock:
             transcript = transcribe_audio(str(wav))
-
-        # Gemini lỗi thì vẫn giữ transcript, chỉ thiếu biên bản
-        summary, minutes = None, "Chưa có biên bản (thiếu GEMINI_API_KEY)."
-        try:
-            summary = summarize_transcript(transcript)  # None nếu thiếu API key
-            if summary:
-                minutes = format_bien_ban(summary)
-        except Exception as e:
-            minutes = f"Chưa có biên bản vì lỗi khi tóm tắt: {str(e)[:300]}"
-
-        # Lưu file giống main.py để cả nhóm xem lại được
-        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+        if not transcript or not transcript.strip():
+            raise RuntimeError("Không nhận diện được lời nói trong file âm thanh")
+        # Hiện transcript ngay khi ASR xong; không phụ thuộc tốc độ Gemini.
+        ts = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
         (OUT / f"transcript_{ts}.txt").write_text(transcript, encoding="utf-8")
-        if summary:
-            (OUT / f"bienban_{ts}.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
-            (OUT / f"bienban_{ts}.txt").write_text(minutes, encoding="utf-8")
-
-        update_meeting(mid, status="done", transcript=transcript, minutes=minutes)
-    except Exception as e:
-        update_meeting(mid, status="error", error=str(e)[:500])
+        update_meeting(mid, transcript=transcript, status="done", summary_status="processing")
+        retry_meeting_summary(mid)
+    except Exception as exc:
+        update_meeting(mid, status="error", error=str(exc)[:300], summary_status="error")

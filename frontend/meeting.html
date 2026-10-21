@@ -12,6 +12,48 @@
 <script src="js/common.js"></script>
 <script>
 layout('meetings.html', 'Chi tiết cuộc họp');
+
+function minutesHtml(m) {
+  const d = m.summary;
+  if (!d || typeof d !== 'object') return `<pre class="txt">${esc(m.minutes || 'Chưa có biên bản')}</pre>`;
+  const meta = d.metadata || {};
+  const arr = value => Array.isArray(value) ? value : [];
+  const list = values => arr(values).length
+    ? `<ul class="minutes-list">${arr(values).map(x => `<li>${esc(x)}</li>`).join('')}</ul>`
+    : '<p class="muted">Chưa có thông tin được xác nhận.</p>';
+  const topics = arr(d.noi_dung_thao_luan).map((t,i) => `
+    <section class="minutes-topic"><h4>${i+1}. ${esc(t.chu_de)}</h4>${list(t.chi_tiet)}</section>`).join('');
+  const tasks = arr(d.action_items);
+  return `<article class="minutes-sheet">
+    <div class="minutes-title"><span>BIÊN BẢN CUỘC HỌP</span><h2>${esc(meta.tieu_de || m.title)}</h2><p>Bản tổng hợp tự động · Cần đối chiếu với nội dung ghi âm</p></div>
+    <div class="minutes-info">
+      <div><b>Ngày thực hiện</b><span>${esc(meta.ngay_thuc_hien || 'Chưa rõ')}</span></div>
+      <div><b>Thời lượng</b><span>${esc(m.sec ? fmtDur(m.sec) : (meta.thoi_luong || 'Chưa rõ'))}</span></div>
+      <div class="full"><b>Người tham dự</b><span>${arr(meta.thanh_phan_tham_du).length ? arr(meta.thanh_phan_tham_du).map(esc).join(' · ') : 'Chưa rõ'}</span></div>
+    </div>
+    <section class="minutes-section"><h3>01 / Tổng quan</h3><p>${esc(d.tong_quan || 'Chưa rõ')}</p></section>
+    <section class="minutes-section"><h3>02 / Nội dung thảo luận</h3>${topics || '<p class="muted">Chưa có dữ liệu.</p>'}</section>
+    <section class="minutes-section"><h3>03 / Quyết định đã thống nhất</h3>${list(d.quyet_dinh)}</section>
+    <section class="minutes-section"><h3>04 / Công việc cần thực hiện</h3>
+      ${tasks.length ? `<div class="minutes-table-wrap"><table class="minutes-table"><thead><tr><th>STT</th><th>Công việc</th><th>Phụ trách</th><th>Hạn hoàn thành</th><th>Ưu tiên</th></tr></thead><tbody>${tasks.map((it,i) => `<tr><td>${i+1}</td><td>${esc(it.cong_viec)}</td><td>${esc(it.nguoi_phu_trach || 'Chưa rõ')}</td><td>${esc(it.deadline || 'Chưa rõ')}</td><td>${esc(it.uu_tien || '—')}</td></tr>`).join('')}</tbody></table></div>` : '<p class="muted">Chưa có đầu việc được xác nhận.</p>'}
+    </section>
+  </article>`;
+}
+function transcriptHtml(m) {
+  const cleaned = m.transcript_clean;
+  return `<div class="card"><div class="transcript-head"><h3>Transcript</h3>${cleaned ? '<div class="tab-pair"><button type="button" class="tab-btn selected" id="show-clean">Đã chỉnh dấu câu</button><button type="button" class="tab-btn" id="show-raw">Bản gốc ASR</button></div>' : ''}</div>
+    <p class="transcript-note">Bản chỉnh sửa do AI tạo có thể chưa chính xác với tên riêng, số liệu và người nói.</p>
+    <div id="transcript-content" class="readable-transcript">${esc(cleaned || m.transcript || '')}</div></div>`;
+}
+function setupTranscriptTabs(m) {
+  if (!m.transcript_clean) return;
+  const content = document.getElementById('transcript-content');
+  const clean = document.getElementById('show-clean');
+  const raw = document.getElementById('show-raw');
+  clean.addEventListener('click', () => { content.textContent = m.transcript_clean; clean.classList.add('selected'); raw.classList.remove('selected'); });
+  raw.addEventListener('click', () => { content.textContent = m.transcript || ''; raw.classList.add('selected'); clean.classList.remove('selected'); });
+}
+
 const id = new URLSearchParams(location.search).get('id');
 async function show() {
   const view = document.getElementById('view');
@@ -24,16 +66,46 @@ async function show() {
     view.innerHTML = '<div class="card empty"><b>Không tải được cuộc họp</b>Kiểm tra backend đã chạy chưa.</div>';
     return;
   }
-  const [label, cls] = STATUS[m.status] || STATUS.error;
+ const [label, cls] = typeof meetingStatus === 'function'
+  ? meetingStatus(m)
+  : (
+      m.status === 'processing'
+        ? ['Đang xử lý', 'warn']
+        : m.status === 'error'
+          ? ['Thất bại', 'err']
+          : m.summary_status === 'processing'
+            ? ['Đang tạo biên bản', 'warn']
+            : m.summary_status === 'error'
+              ? ['Chưa có biên bản', 'warn']
+              : ['Hoàn thành', 'ok']
+    );
   let body;
   if (m.status === 'processing') body = '<div class="card empty"><b>AI đang xử lý…</b>Trang tự cập nhật. Lần đầu có thể mất vài phút.</div>';
   else if (m.status === 'error') body = `<div class="card"><h3>Có lỗi khi xử lý</h3><pre class="txt">${esc(m.error)}</pre></div>`;
-  else body = `<div class="card"><h3>Biên bản</h3><pre class="txt">${esc(m.minutes)}</pre></div>
-    <div style="height:26px"></div><div class="card"><h3>Transcript</h3><pre class="txt">${esc(m.transcript)}</pre></div>`;
+  else {
+    const ready = m.summary && typeof m.summary === 'object';
+    const making = m.summary_status === 'processing';
+    const retry = `<div style="margin:16px 0"><button id="retry-summary" class="btn pri" type="button" ${making ? 'disabled' : ''}>${making ? 'Đang tạo biên bản…' : '↻ Tạo lại biên bản từ transcript'}</button><span id="retry-message" class="muted" style="margin-left:12px"></span></div>`;
+    const summaryView = ready ? minutesHtml(m) : `<p class="muted">${making ? 'Gemini đang tạo biên bản. Transcript đã được lưu.' : 'Chưa tạo được biên bản. Transcript vẫn được lưu và có thể tạo lại.'}</p>`;
+    body = `<div class="card"><h3>Biên bản</h3>${summaryView}${retry}</div><div style="height:26px"></div>${transcriptHtml(m)}`;
+  }
   view.innerHTML = `<a class="back" style="margin:0 0 26px" href="meetings.html">${ic('back', 18)} Quay lại danh sách</a>
     <h2 class="h1" style="margin-top:0">${esc(m.title)}</h2>
     <p style="margin-bottom:26px"><span class="badge ${cls}">${label}</span> <span style="color:var(--mute)">&nbsp;${fmtDate(m.created)} · ${fmtDur(m.sec)}</span></p>${body}`;
-  if (m.status === 'processing') setTimeout(show, 3000);
+  if (m.status === 'done') {
+    setupTranscriptTabs(m);
+    const btn = document.getElementById('retry-summary');
+    if (btn && !btn.disabled) btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      document.getElementById('retry-message').textContent = 'Đang gửi yêu cầu…';
+      try {
+        const r = await fetch(`${API}/api/meetings/${id}/retry-summary`, {method:'POST'});
+        if (!r.ok) {const e = await r.json(); throw new Error(e.detail || 'Không thể thử lại');}
+        await show();
+      } catch(e) {btn.disabled = false; document.getElementById('retry-message').textContent = e.message;}
+    });
+  }
+  if (m.status === 'processing' || m.summary_status === 'processing') setTimeout(show, 3000);
 }
 show();
 </script>
