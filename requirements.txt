@@ -14,3 +14,9 @@ openai
 
 # Đọc API key từ file .env
 python-dotenv
+
+# Backend FastAPI
+fastapi
+uvicorn
+python-multipart
+imageio-ffmpeg
