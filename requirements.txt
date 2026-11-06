@@ -7,6 +7,8 @@ librosa
 # ASR (PhoWhisper)
 transformers
 torch
+faster-whisper==1.2.1
+ctranslate2==4.8.5
 
 # Tóm tắt (dùng Gemini; openai chỉ cần nếu muốn dùng GPT)
 google-genai

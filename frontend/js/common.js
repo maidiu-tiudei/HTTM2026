@@ -18,7 +18,15 @@ const NAV = [
   ['settings.html', 'Cài đặt', 'gear'], ['users.html', 'Người dùng', 'users']
 ];
 const STATUS = {done: ['Đã phiên âm', ''], processing: ['Đang phiên âm', 'wait'], error: ['Lỗi', 'err']};
-const meetingStatus = m => m.status === 'done' ? (m.summary_status === 'processing' ? ['Đang tạo biên bản','wait'] : m.summary_status === 'error' || (!m.summary && m.minutes && m.minutes.startsWith('Chưa có')) ? ['Chưa có biên bản','err'] : m.summary ? ['Hoàn thành',''] : ['Đã phiên âm','']) : (STATUS[m.status] || STATUS.error);
+const STAGES = {queued: 'Đã tiếp nhận audio', converting: 'Đang chuẩn hóa audio', waiting_asr: 'Đang chờ phiên âm', transcribing: 'Đang phiên âm', summarizing: 'Đang tạo biên bản', done: 'Hoàn thành', summary_error: 'Lỗi tạo biên bản', error: 'Xử lý thất bại'};
+function meetingStatus(m) {
+  if (m.status === 'processing') return [STAGES[m.stage] || 'Đang xử lý', 'wait'];
+  if (m.status === 'error') return ['Lỗi xử lý audio', 'err'];
+  if (m.summary_status === 'processing') return ['Đang tạo biên bản', 'wait'];
+  if (m.summary_status === 'error') return [m.summary ? 'Tạo lại lỗi · Có bản cũ' : 'Chưa có biên bản', 'err'];
+  if (m.summary_outdated) return ['Transcript đã sửa · Cần tạo lại', 'wait'];
+  return m.summary ? ['Hoàn thành', ''] : ['Đã phiên âm', ''];
+}
 
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
 const fmtDur = s => !s ? '—' : s < 60 ? `${s}s` : `${Math.round(s / 60)} min`;

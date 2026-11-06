@@ -1,6 +1,9 @@
 """Lưu và đọc danh sách cuộc họp trong meeting_outputs/meetings.json."""
 import json
 import threading
+import os
+import tempfile
+from copy import deepcopy
 from pathlib import Path
 
 import config
@@ -19,7 +22,19 @@ def _read():
 
 
 def _write(items):
-    DB.write_text(json.dumps(items, ensure_ascii=False, indent=2), encoding="utf-8")
+    # Chỉ thay DB sau khi ghi xong file tạm; tránh làm rỗng dữ liệu cũ nếu ghi lỗi.
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=DB.parent,
+                                         prefix=DB.name + ".", suffix=".tmp", delete=False) as stream:
+            temporary = Path(stream.name)
+            json.dump(items, stream, ensure_ascii=False, indent=2)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, DB)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
 
 
 def all_meetings():
@@ -45,3 +60,15 @@ def update_meeting(mid, **fields):
             if m["id"] == mid:
                 m.update(fields)
         _write(items)
+
+
+def mutate_meeting(mid, change):
+    """Kiểm tra và cập nhật trong cùng khóa, tránh yêu cầu đồng thời đè nhau."""
+    with _lock:
+        items = _read()
+        meeting = next((item for item in items if item["id"] == mid), None)
+        if meeting is None:
+            return None
+        meeting.update(change(deepcopy(meeting)))
+        _write(items)
+        return deepcopy(meeting)

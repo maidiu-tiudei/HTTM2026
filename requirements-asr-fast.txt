@@ -1,0 +1,9 @@
+# Bộ thực thi ASR tùy chọn, cài bằng Python 3.10
+faster-whisper==1.2.1
+ctranslate2==4.8.5
+
+# Thư viện GPU cho Windows, phù hợp với driver hiện tại của máy Legion.
+# Không cần cài lại torch. Linux/macOS có cách cài thư viện GPU riêng.
+nvidia-cublas-cu12==12.3.4.1; sys_platform == "win32"
+nvidia-cudnn-cu12==9.1.0.70; sys_platform == "win32"
+nvidia-cuda-nvrtc-cu12==12.3.107; sys_platform == "win32"

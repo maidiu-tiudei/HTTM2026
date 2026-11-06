@@ -101,3 +101,25 @@ td a:hover{color:var(--blue)}
 .transcript-note{margin:0 0 16px}
 .readable-transcript{white-space:pre-wrap;overflow-wrap:anywhere;line-height:2;font-size:15px}
 @media(max-width:650px){.minutes-info{grid-template-columns:1fr}.minutes-title h2{font-size:22px}}
+[hidden]{display:none!important}
+button:disabled{opacity:.55;cursor:not-allowed}
+.meeting-meta{margin:12px 0 26px;color:var(--mute);line-height:2}
+.meeting-sections{display:grid;grid-template-columns:minmax(0,1fr);gap:26px;min-width:0}
+.meeting-sections>.card{min-width:0}
+.progress-caption{font-weight:600;color:var(--blue);margin-bottom:18px}
+.processing-steps{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:0;list-style:none;margin:20px 0}
+.processing-steps li{display:flex;gap:10px;align-items:center;font-size:14px;color:var(--mute);padding:12px 0;border-bottom:3px solid var(--line)}
+.processing-steps li span{display:grid;place-items:center;flex:none;width:28px;height:28px;border-radius:50%;background:#eef0f5}
+.processing-steps li.active{color:var(--blue);border-color:var(--blue)}
+.processing-steps li.complete{color:#14703a;border-color:#8acfaa}
+.processing-steps li.failed{color:#b42318;border-color:#e79891}
+.processing-times{display:flex;flex-wrap:wrap;gap:18px 30px;margin:20px 0}
+.processing-times dt{font-size:12px;color:var(--mute);margin-bottom:6px}
+.processing-times dd{font-size:16px;font-weight:700;margin:0}
+.meeting-notice{padding:14px 18px;background:#edf2ff;border:1px solid #d9e1fd;border-radius:12px;font-size:14px;line-height:1.6;margin:12px 0}
+.meeting-notice.error{background:#fff1f0;border-color:#f0c2be;color:#a22c24}
+.transcript-tabs{width:fit-content;margin:18px 0}
+.transcript-input.in{min-height:300px;height:40vh;line-height:1.9;margin:0}
+.transcript-actions{display:flex;flex-wrap:wrap;gap:12px;justify-content:flex-end;margin-top:20px}
+.edit-message{min-height:26px;margin-top:10px;font-size:14px;color:#a22c24}
+@media(max-width:650px){.processing-steps{grid-template-columns:1fr 1fr}.transcript-actions .btn{width:100%;justify-content:center}.transcript-head .btn{font-size:14px}}

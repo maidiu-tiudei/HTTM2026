@@ -12,6 +12,14 @@ venv/
 # Meeting data
 meeting_outputs/
 
+# Model CTranslate2 được chuyển từ trọng số PhoWhisper trên máy
+models/ct2/
+
+# Audio cục bộ dùng thử, không đưa lên repository
+/*.[mM][pP]3
+/*.[wW][aA][vV]
+/*.webm
+
 # Node
 node_modules/
 package-lock.json
