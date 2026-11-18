@@ -131,3 +131,42 @@ button:disabled{opacity:.55;cursor:not-allowed}
 .spk-turn p{margin:4px 0 0;line-height:1.6}
 .spk-time{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--mute);min-width:44px;padding-top:2px}
 @media(max-width:650px){.processing-steps{grid-template-columns:1fr 1fr}.transcript-actions .btn{width:100%;justify-content:center}.transcript-head .btn{font-size:14px}}
+
+.speaker-card audio{display:block;width:100%;margin:0 0 16px}
+.speaker-toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:8px 14px;margin:12px 0}
+.speaker-toolbar p{flex-basis:100%}
+.speaker-toolbar label{margin:0}
+.speaker-toolbar select,.chat-form textarea{font:inherit;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 12px}
+.speaker-turns{list-style:none;margin:14px 0;padding:0}
+.speaker-turns{display:grid;gap:8px;max-height:440px;overflow:auto;overscroll-behavior:contain}
+.speaker-turn{--speaker:#53657d;background:#f4f7fb;border:1px solid #e6ecf5;border-left:3px solid var(--speaker);border-radius:8px;padding:11px 14px;overflow-wrap:anywhere}
+.speaker-color-0{--speaker:#3054ba}.speaker-color-1{--speaker:#08765c}.speaker-color-2{--speaker:#9b530c}.speaker-color-3{--speaker:#7d3da7}
+.speaker-turn-header{display:flex;gap:6px 12px;justify-content:space-between;align-items:center;flex-wrap:wrap;font-size:13px;color:var(--speaker);margin-bottom:6px}
+.speaker-turn p{line-height:1.65;font-size:14px}
+.speaker-time{font:inherit;font-variant-numeric:tabular-nums;color:#43536a;padding:3px 0}
+button.speaker-time:hover,.chat-source button:hover{text-decoration:underline}
+.chat-suggestions{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
+.chat-suggestions .btn{padding:7px 11px;font-size:13px}
+.meeting-chat-widget{--chat-edge:20px;--chat-right:max(var(--chat-edge),env(safe-area-inset-right));--chat-left:max(var(--chat-edge),env(safe-area-inset-left));--chat-bottom:max(var(--chat-edge),env(safe-area-inset-bottom));position:fixed;z-index:30;right:var(--chat-right);bottom:var(--chat-bottom)}
+.chat-launcher{display:flex;align-items:center;gap:9px;padding:14px 18px;border-radius:999px;background:var(--blue);color:#fff;font-size:14px;font-weight:800;box-shadow:0 8px 24px rgba(47,85,212,.35)}
+.chat-launcher:hover{background:#2648ba}
+.meeting-chat{display:flex;flex-direction:column;width:min(450px,calc(100vw - var(--chat-left) - var(--chat-right)));height:min(640px,calc(100vh - var(--chat-bottom) - var(--chat-edge)));height:min(640px,calc(100dvh - var(--chat-bottom) - max(var(--chat-edge),env(safe-area-inset-top))));background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:0 16px 55px rgba(21,29,55,.24);overflow:hidden}
+.chat-header{display:flex;align-items:center;gap:10px;padding:8px 14px 8px 16px;background:var(--blue);color:#fff;flex-shrink:0}
+.chat-header h3{font-size:16px;flex:1}
+.chat-close{display:grid;place-items:center;width:40px;height:40px;border-radius:8px}
+.chat-close:hover{background:rgba(255,255,255,.16)}
+.chat-close:focus-visible{outline-color:#fff;outline-offset:-3px}
+.chat-scroll{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;padding:16px}
+.chat-scroll>.muted{font-size:14px;line-height:1.55}
+.chat-messages{display:grid;gap:14px;list-style:none;margin:14px 0 0;padding:0}
+.chat-question,.chat-answer{padding:12px 14px;border-radius:10px;line-height:1.65;overflow-wrap:anywhere;font-size:14px}
+.chat-question{background:#edf2ff;margin-bottom:6px}.chat-question strong{margin-right:7px}
+.chat-answer{background:#f6f8fb}.chat-answer>p{white-space:pre-wrap}
+.chat-source{margin:10px 0 0;padding:8px 11px;border-left:2px solid #a7b8dd;font-size:13px;color:#43536a}
+.chat-source button{font-weight:700;color:var(--blue);padding:0;text-align:left}
+.chat-form{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:6px 10px;padding:10px 14px 12px;border-top:1px solid var(--line);background:#f6f8fb;flex-shrink:0}
+.chat-form label,.chat-form .edit-message{grid-column:1/-1;font-size:13px}
+.chat-form textarea{width:100%;resize:none;line-height:1.45}
+.chat-form .edit-message:empty{display:none}
+.chat-form .btn{padding:11px 16px;font-size:14px}
+@media(max-width:600px){.meeting-chat-widget{--chat-edge:10px}.chat-form textarea{font-size:16px}}
