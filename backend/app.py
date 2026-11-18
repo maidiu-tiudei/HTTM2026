@@ -8,7 +8,8 @@ from pathlib import Path
 from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, StrictStr
-
+from nlp.chat import answer_meeting_question
+from nlp.errors import SummaryError
 from . import storage
 from .pipeline import process_meeting, warm_up, retry_meeting_summary
 
@@ -103,3 +104,29 @@ def edit_transcript(mid: str, body: TranscriptEdit):
     if meeting is None:
         raise HTTPException(404, "Không tìm thấy cuộc họp")
     return meeting
+class ChatTurn(BaseModel):
+    role: StrictStr
+    content: StrictStr
+
+
+class MeetingChatRequest(BaseModel):
+    question: StrictStr = Field(min_length=1, max_length=2000)
+    history: list[ChatTurn] = Field(default_factory=list)
+
+
+@app.post("/api/meetings/{mid}/chat")
+def chat_meeting(mid: str, body: MeetingChatRequest):
+    m = storage.get_meeting(mid)
+    if not m:
+        raise HTTPException(404, "Không tìm thấy cuộc họp")
+    if not (m.get("transcript_edited") or m.get("transcript") or "").strip():
+        raise HTTPException(409, "Cuộc họp chưa có nội dung transcript để hỏi đáp")
+    question = body.question.strip()
+    if not question:
+        raise HTTPException(422, "Câu hỏi không được để trống")
+    try:
+        history = [{"role": t.role, "content": t.content} for t in body.history]
+        answer = answer_meeting_question(m, question, history)
+        return {"answer": answer}
+    except SummaryError as exc:
+        raise HTTPException(502, str(exc))

@@ -130,4 +130,17 @@ button:disabled{opacity:.55;cursor:not-allowed}
 .spk-turn{display:flex;gap:14px;padding:10px 0;border-top:1px solid var(--line)}
 .spk-turn p{margin:4px 0 0;line-height:1.6}
 .spk-time{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--mute);min-width:44px;padding-top:2px}
+/* Chat Q&A cuộc họp */
+.chat-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.chat-chip { font-size: 13px; padding: 6px 12px; }
+.chat-log { display: flex; flex-direction: column; gap: 10px; max-height: 360px; overflow-y: auto; margin: 14px 0; padding: 4px 2px; }
+.chat-msg { display: flex; }
+.chat-msg.user { justify-content: flex-end; }
+.chat-msg.bot { justify-content: flex-start; }
+.chat-bubble { max-width: 82%; padding: 10px 14px; border-radius: 12px; font-size: 14px; line-height: 1.5; background: #f3f4f6; color: #111827; }
+.chat-msg.user .chat-bubble { background: #4f46e5; color: #ffffff; }
+.chat-bubble strong { display: block; font-size: 11px; opacity: 0.8; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
+.chat-bubble p { margin: 0; }
+.chat-form { display: flex; gap: 10px; margin-top: 8px; }
+.chat-form .in { flex: 1; }
 @media(max-width:650px){.processing-steps{grid-template-columns:1fr 1fr}.transcript-actions .btn{width:100%;justify-content:center}.transcript-head .btn{font-size:14px}}

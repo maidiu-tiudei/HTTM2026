@@ -30,6 +30,8 @@ function minutesHtml(m) {
 const id = new URLSearchParams(location.search).get('id');
 const meetingUrl = `${API}/api/meetings/${encodeURIComponent(id || '')}`;
 let timer = null, editorOpen = false, saving = false, currentMeeting = null, notice = null;
+let chatMessages = [], chatSending = false;
+
 const isBusy = m => m.status === 'processing' || m.summary_status === 'processing' || m.pipeline_status === 'processing';
 const seconds = value => typeof value === 'number' && Number.isFinite(value)
   ? `${value.toLocaleString('vi-VN', {maximumFractionDigits: 2})} giây` : '—';
@@ -80,6 +82,95 @@ function transcriptHtml(m) {
       <button id="save-and-retry" class="btn pri" type="button">Lưu và tạo lại biên bản</button></div>
     </div></section>`;
 }
+
+const CHAT_SUGGESTIONS = [
+  'Tóm tắt 3 ý chính của cuộc họp?',
+  'Ai là người phụ trách các công việc?',
+  'Có quyết định nào đã được thống nhất?'
+];
+
+function chatHtml() {
+  const msgs = chatMessages.length
+    ? chatMessages.map(msg => `
+        <div class="chat-msg ${msg.role === 'user' ? 'user' : 'bot'}">
+          <div class="chat-bubble">
+            <strong>${msg.role === 'user' ? 'Bạn' : 'Trợ lý AI'}</strong>
+            <p>${esc(msg.content).replace(/\n/g, '<br>')}</p>
+          </div>
+        </div>`).join('')
+    : `<p class="muted" style="margin:0">Đặt câu hỏi bất kỳ về nội dung, quyết định hoặc lời phát biểu trong cuộc họp này.</p>`;
+
+  const chips = !chatMessages.length
+    ? `<div class="chat-chips">${CHAT_SUGGESTIONS.map(q => `<button type="button" class="btn out chat-chip" data-q="${esc(q)}">${esc(q)}</button>`).join('')}</div>`
+    : '';
+
+  return `<section class="card chat-card">
+    <div class="transcript-head">
+      <h3>Hỏi đáp AI về cuộc họp</h3>
+      ${chatMessages.length ? '<button id="clear-chat" class="btn out" type="button">Xóa hội thoại</button>' : ''}
+    </div>
+    ${chips}
+    <div id="chat-log" class="chat-log">${msgs}</div>
+    <p id="chat-status" class="edit-message" role="status">${chatSending ? 'AI đang đọc transcript và trả lời…' : ''}</p>
+    <form id="chat-form" class="chat-form">
+      <input id="chat-input" class="in" type="text" maxlength="2000" placeholder="Nhập câu hỏi về nội dung cuộc họp…" autocomplete="off" ${chatSending ? 'disabled' : ''}>
+      <button id="chat-send" class="btn pri" type="submit" ${chatSending ? 'disabled' : ''}>${chatSending ? 'Đang trả lời…' : 'Gửi'}</button>
+    </form>
+  </section>`;
+}
+
+function setupChat() {
+  const form = document.getElementById('chat-form');
+  if (!form) return;
+  const input = document.getElementById('chat-input');
+  const log = document.getElementById('chat-log');
+  if (log) log.scrollTop = log.scrollHeight;
+
+  document.querySelectorAll('.chat-chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      input.value = btn.dataset.q;
+      form.requestSubmit();
+    });
+  });
+
+  const clearBtn = document.getElementById('clear-chat');
+  if (clearBtn) {
+    clearBtn.addEventListener('click', () => {
+      if (chatSending) return;
+      chatMessages = [];
+      renderMeeting(currentMeeting);
+    });
+  }
+
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    if (chatSending) return;
+    const question = input.value.trim();
+    if (!question) return;
+
+    const history = chatMessages.slice(-8);
+    chatMessages.push({role: 'user', content: question});
+    chatSending = true;
+    renderMeeting(currentMeeting);
+
+    try {
+      const res = await request(`${meetingUrl}/chat`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({question, history})
+      });
+      chatMessages.push({role: 'assistant', content: res.answer});
+    } catch (err) {
+      chatMessages.push({role: 'assistant', content: `Lỗi: ${err.message || 'Không thể kết nối tới AI.'}`});
+    } finally {
+      chatSending = false;
+      renderMeeting(currentMeeting);
+      const nextInput = document.getElementById('chat-input');
+      if (nextInput) nextInput.focus();
+    }
+  });
+}
+
 async function request(url, options) {
   const response = await fetch(url, options);
   const data = await response.json();
@@ -158,6 +249,31 @@ async function saveTranscript(m, retry) {
   }
 }
 
+function renderMeeting(m) {
+  if (!m) return;
+  const view = document.getElementById('view');
+  const [label, cls] = meetingStatus(m);
+  let body = progressHtml(m);
+  if (notice) body += `<p class="meeting-notice ${notice.kind === 'error' ? 'error' : ''}" role="status">${esc(notice.text)}</p>`;
+  if (m.status === 'error') body += `<section class="card"><h3>Có lỗi khi xử lý audio</h3><pre class="txt">${esc(m.error)}</pre></section>`;
+  if (m.transcript) {
+    const ready = m.summary && typeof m.summary === 'object';
+    const making = m.summary_status === 'processing';
+    const error = m.summary_status === 'error' ? `<p class="meeting-notice error" role="alert">${esc(m.summary_error || 'Chưa tạo được biên bản. Hãy thử lại.')}${ready ? ' Biên bản thành công trước đó vẫn được giữ lại.' : ''}</p>` : '';
+    const outdated = m.summary_outdated && ready ? '<p class="meeting-notice">Biên bản dưới đây thuộc phiên bản transcript trước. Hãy tạo lại để cập nhật nội dung đã chỉnh.</p>' : '';
+    body += `<section class="card"><h3>Biên bản</h3>${error}${outdated}${ready ? minutesHtml(m) : `<p class="muted">${making ? 'Đang tạo biên bản. Transcript đã được lưu.' : 'Chưa có biên bản. Bạn có thể sửa transcript hoặc thử tạo lại.'}</p>`}
+      <div class="transcript-actions"><button id="retry-summary" class="btn pri" type="button" ${isBusy(m) ? 'disabled' : ''}>${making ? 'Đang tạo biên bản…' : 'Tạo lại biên bản từ transcript'}</button></div></section>${transcriptHtml(m)}${chatHtml()}`;
+  }
+  view.innerHTML = `<a class="back" href="meetings.html">${ic('back', 18)} Quay lại danh sách</a>
+    <h2 class="h1">${esc(m.title)}</h2><p class="meeting-meta"><span class="badge ${cls}">${esc(label)}</span> ${fmtDate(m.created)} · ${fmtDur(m.sec)}</p><div class="meeting-sections">${body}</div>`;
+  if (m.transcript) {
+    setupTranscript(m);
+    setupChat();
+  }
+  const retry = document.getElementById('retry-summary');
+  if (retry && !retry.disabled) retry.addEventListener('click', retrySummary);
+}
+
 async function show() {
   clearTimeout(timer);
   if (editorOpen) return;
@@ -174,23 +290,7 @@ async function show() {
   }
   if (editorOpen) return;
   currentMeeting = m;
-  const [label, cls] = meetingStatus(m);
-  let body = progressHtml(m);
-  if (notice) body += `<p class="meeting-notice ${notice.kind === 'error' ? 'error' : ''}" role="status">${esc(notice.text)}</p>`;
-  if (m.status === 'error') body += `<section class="card"><h3>Có lỗi khi xử lý audio</h3><pre class="txt">${esc(m.error)}</pre></section>`;
-  if (m.transcript) {
-    const ready = m.summary && typeof m.summary === 'object';
-    const making = m.summary_status === 'processing';
-    const error = m.summary_status === 'error' ? `<p class="meeting-notice error" role="alert">${esc(m.summary_error || 'Chưa tạo được biên bản. Hãy thử lại.')}${ready ? ' Biên bản thành công trước đó vẫn được giữ lại.' : ''}</p>` : '';
-    const outdated = m.summary_outdated && ready ? '<p class="meeting-notice">Biên bản dưới đây thuộc phiên bản transcript trước. Hãy tạo lại để cập nhật nội dung đã chỉnh.</p>' : '';
-    body += `<section class="card"><h3>Biên bản</h3>${error}${outdated}${ready ? minutesHtml(m) : `<p class="muted">${making ? 'Đang tạo biên bản. Transcript đã được lưu.' : 'Chưa có biên bản. Bạn có thể sửa transcript hoặc thử tạo lại.'}</p>`}
-      <div class="transcript-actions"><button id="retry-summary" class="btn pri" type="button" ${isBusy(m) ? 'disabled' : ''}>${making ? 'Đang tạo biên bản…' : 'Tạo lại biên bản từ transcript'}</button></div></section>${transcriptHtml(m)}`;
-  }
-  view.innerHTML = `<a class="back" href="meetings.html">${ic('back', 18)} Quay lại danh sách</a>
-    <h2 class="h1">${esc(m.title)}</h2><p class="meeting-meta"><span class="badge ${cls}">${esc(label)}</span> ${fmtDate(m.created)} · ${fmtDur(m.sec)}</p><div class="meeting-sections">${body}</div>`;
-  if (m.transcript) setupTranscript(m);
-  const retry = document.getElementById('retry-summary');
-  if (retry && !retry.disabled) retry.addEventListener('click', retrySummary);
+  renderMeeting(m);
   if (isBusy(m)) timer = setTimeout(show, 3000);
 }
 
