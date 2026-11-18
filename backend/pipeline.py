@@ -10,6 +10,7 @@ import soundfile as sf
 
 import config
 from asr.transcriber import _load_pipeline, transcribe_audio, get_asr_runtime
+from asr.diarization import identify_turns, speaker_timeline
 from nlp.errors import SummaryError, classify_summary_error
 from nlp.formatter import format_bien_ban
 from nlp.schema import validate_summary
@@ -90,6 +91,26 @@ def retry_meeting_summary(mid):
                summary_error=str(error), summary_error_code=error.code)
 
 
+def save_speaker_timeline(mid, wav, segments=None):
+    """Xử lý riêng lỗi phân vai để giữ transcript và biên bản hiện có."""
+    started = time.perf_counter()
+    try:
+        if segments is None:
+            with _run_lock:
+                _, segments = transcribe_audio(str(wav), include_segments=True)
+        if not segments:
+            raise RuntimeError("Bộ phiên âm chưa trả mốc thời gian cho file này.")
+        timeline = speaker_timeline(segments, identify_turns(wav))
+        count = len({row["speaker_id"] for row in timeline if row["speaker_id"]})
+        record_time(mid, "speaker_seconds", started, speaker_status="done", speaker_error=None,
+                    speaker_segments=timeline, speaker_count=count, people=count or None, speaker_names={},
+                    speaker_version=datetime.now().isoformat(timespec="microseconds"))
+    except Exception as exc:
+        print(f"[{mid}] Speaker analysis failed: {ascii(str(exc))}")
+        message = str(exc) if str(exc).startswith(("Chưa có model", "Chưa cài sherpa", "Bộ phiên âm")) else "Không tách được người nói từ audio này. Bạn có thể thử lại."
+        record_time(mid, "speaker_seconds", started, speaker_status="error", speaker_error=message)
+
+
 def process_meeting(mid, src):
     pipeline_started = time.perf_counter()
     stage = "converting"
@@ -112,7 +133,7 @@ def process_meeting(mid, src):
             update_meeting(mid, stage=stage)
             started = time.perf_counter()
             try:
-                transcript = transcribe_audio(str(wav))
+                transcript, segments = transcribe_audio(str(wav), include_segments=True)
                 update_meeting(mid, asr_runtime=get_asr_runtime())
             finally:
                 record_time(mid, "asr_seconds", started)
@@ -121,7 +142,8 @@ def process_meeting(mid, src):
         ts = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
         (OUT / f"transcript_{ts}.txt").write_text(transcript, encoding="utf-8")
         update_meeting(mid, transcript=transcript, transcript_revision=0,
-                       status="done", stage="summarizing", summary_status="processing")
+                       status="done", stage="diarizing", speaker_status="processing")
+        save_speaker_timeline(mid, wav, segments)
         retry_meeting_summary(mid)
     except Exception as exc:
         update_meeting(mid, status="error", stage="error", failed_stage=stage,

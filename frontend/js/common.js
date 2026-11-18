@@ -18,10 +18,11 @@ const NAV = [
   ['settings.html', 'Cài đặt', 'gear'], ['users.html', 'Người dùng', 'users']
 ];
 const STATUS = {done: ['Đã phiên âm', ''], processing: ['Đang phiên âm', 'wait'], error: ['Lỗi', 'err']};
-const STAGES = {queued: 'Đã tiếp nhận audio', converting: 'Đang chuẩn hóa audio', waiting_asr: 'Đang chờ phiên âm', transcribing: 'Đang phiên âm', summarizing: 'Đang tạo biên bản', done: 'Hoàn thành', summary_error: 'Lỗi tạo biên bản', error: 'Xử lý thất bại'};
+const STAGES = {queued: 'Đã tiếp nhận audio', converting: 'Đang chuẩn hóa audio', waiting_asr: 'Đang chờ phiên âm', transcribing: 'Đang phiên âm', diarizing: 'Đang tách người nói', summarizing: 'Đang tạo biên bản', done: 'Hoàn thành', summary_error: 'Lỗi tạo biên bản', error: 'Xử lý thất bại'};
 function meetingStatus(m) {
   if (m.status === 'processing') return [STAGES[m.stage] || 'Đang xử lý', 'wait'];
   if (m.status === 'error') return ['Lỗi xử lý audio', 'err'];
+  if (m.speaker_status === 'processing') return ['Đang tách người nói', 'wait'];
   if (m.summary_status === 'processing') return ['Đang tạo biên bản', 'wait'];
   if (m.summary_status === 'error') return [m.summary ? 'Tạo lại lỗi · Có bản cũ' : 'Chưa có biên bản', 'err'];
   if (m.summary_outdated) return ['Transcript đã sửa · Cần tạo lại', 'wait'];
@@ -62,7 +63,7 @@ function meetingTable(list) {
   const rows = list.map(m => {
     const [label, cls] = meetingStatus(m);
     return `<tr><td><b><a href="meeting.html?id=${m.id}">${esc(m.title)}</a></b></td><td>${fmtDate(m.created)}</td>
-    <td><span class="who">${ic('users', 16)} ${m.people}</span></td><td>${fmtDur(m.sec)}</td>
+    <td><span class="who">${ic('users', 16)} ${esc(m.speaker_count || '—')}</span></td><td>${fmtDur(m.sec)}</td>
     <td><span class="badge ${cls}">${label}</span></td><td>${ic('arr', 18)}</td></tr>`;
   }).join('');
   return `<table><thead><tr><th>Cuộc họp</th><th>Ngày</th><th>Người tham gia</th><th>Thời lượng</th><th>Trạng thái</th><th></th></tr></thead><tbody>${rows}</tbody></table>`;

@@ -13,8 +13,10 @@
 - Tạo lại biên bản từ transcript đã lưu hoặc đã chỉnh, không chạy lại ASR.
 - Giữ biên bản cũ khi lần tạo lại thất bại.
 - Hiển thị giai đoạn, thời gian xử lý và bộ thực thi ASR thực tế.
+- Tách lượt nói cục bộ, gắn ID giọng nói theo cuộc họp và phát lại audio theo mốc.
+- Hỏi đáp về một cuộc họp qua Gemini, có đoạn trích để đối chiếu với transcript.
 
-Hiện chưa có phân tách người nói, đăng nhập/phân quyền hoặc xuất Word/PDF. AI có thể nhận diện và tổng hợp sai; cần đối chiếu tên riêng, số liệu và công việc với audio gốc.
+Phiên bản hiện phục vụ thử nghiệm cục bộ. ID người nói là nhãn giọng nói theo từng cuộc họp. Các đoạn nói chồng hoặc khó gán có thể hiện “Chưa rõ người nói”.
 
 ## Cài đặt trên Windows với Python 3.10
 
@@ -25,6 +27,14 @@ py -3.10 -m pip install -r requirements.txt
 ```
 
 Tạo file `.env` theo `.env.example` rồi điền `GEMINI_API_KEY`. Key chỉ được backend sử dụng. Transcript được gửi đến Gemini qua API; audio được xử lý bằng PhoWhisper trên máy.
+
+Chuẩn bị model tách lượt nói:
+
+```powershell
+py -3.10 -m scripts.prepare_diarization
+```
+
+Script tải hai tệp ONNX từ bản phát hành [sherpa-onnx](https://k2-fsa.github.io/sherpa/onnx/speaker-diarization/index.html) vào `models/diarization/`. Bước phân tích giọng chạy trên CPU. Nếu chưa có model, transcript và biên bản vẫn được tạo, và giao diện hiển thị lỗi ở phần người nói.
 
 ### Chuẩn bị bộ thực thi ASR
 
@@ -86,6 +96,8 @@ py -3.10 -m http.server 5500 --bind 127.0.0.1 -d frontend
 - API: http://127.0.0.1:8000/docs
 
 Đợi model sẵn sàng trong terminal trước khi demo. Khi cập nhật giao diện, nhấn Ctrl + F5. Cần khởi động lại backend khi thay cấu hình ASR hoặc API key.
+
+Trong chi tiết cuộc họp, chọn người nói để lọc lượt nói và bấm mốc để nghe lại. Với cuộc họp cũ còn file WAV, dùng **Phân tích người nói** để tạo timeline. Trong **Hỏi đáp cuộc họp**, có thể hỏi về quyết định, công việc hoặc yêu cầu tóm tắt. Bot ưu tiên transcript đã chỉnh nếu có. Với bản chỉnh sửa tự do, trích dẫn hiển thị văn bản vì các mốc của bản gốc có thể lệch. Lịch sử hỏi đáp nằm trong trang đang mở.
 
 ## Luồng xử lý và lưu trữ
 

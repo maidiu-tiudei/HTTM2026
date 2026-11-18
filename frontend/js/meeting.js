@@ -30,14 +30,14 @@ function minutesHtml(m) {
 const id = new URLSearchParams(location.search).get('id');
 const meetingUrl = `${API}/api/meetings/${encodeURIComponent(id || '')}`;
 let timer = null, editorOpen = false, saving = false, currentMeeting = null, notice = null;
-const isBusy = m => m.status === 'processing' || m.summary_status === 'processing' || m.pipeline_status === 'processing';
+const isBusy = m => m.status === 'processing' || m.summary_status === 'processing' || m.pipeline_status === 'processing' || m.speaker_status === 'processing';
 const seconds = value => typeof value === 'number' && Number.isFinite(value)
   ? `${value.toLocaleString('vi-VN', {maximumFractionDigits: 2})} giây` : '—';
 
 function progressHtml(m) {
   const stage = m.stage || (m.status === 'error' ? 'error' : m.status === 'processing' ? 'transcribing' : m.summary_status === 'processing' ? 'summarizing' : m.summary_status === 'error' ? 'summary_error' : 'done');
   const failed = stage === 'error' || stage === 'summary_error';
-  const stepIndex = {queued: 0, converting: 0, waiting_asr: 1, transcribing: 1, summarizing: 2, summary_error: 2, done: 3};
+  const stepIndex = {queued: 0, converting: 0, waiting_asr: 1, transcribing: 1, diarizing: 1, summarizing: 2, summary_error: 2, done: 3};
   const active = stepIndex[stage === 'error' ? m.failed_stage : stage] ?? 0;
   const labels = ['Chuẩn hóa audio', 'Phiên âm', 'Tạo biên bản', 'Hoàn thành'];
   const times = m.timings || {};
@@ -50,6 +50,7 @@ function progressHtml(m) {
       <div><dt>Chuẩn hóa audio</dt><dd>${seconds(times.conversion_seconds)}</dd></div>
       <div><dt>Chờ phiên âm</dt><dd>${seconds(times.queue_seconds)}</dd></div>
       <div><dt>Phiên âm</dt><dd>${seconds(times.asr_seconds)}</dd></div>
+      <div><dt>Tách người nói gần nhất</dt><dd>${m.speaker_status === 'processing' ? 'Đang đo…' : seconds(times.speaker_seconds)}</dd></div>
       <div><dt>Tạo biên bản gần nhất</dt><dd>${m.summary_status === 'processing' ? 'Đang đo…' : seconds(times.summary_seconds)}</dd></div>
       <div><dt>Tổng lượt xử lý audio ban đầu</dt><dd>${seconds(times.initial_pipeline_seconds)}</dd></div>
     </dl>${!Object.keys(times).length ? '<p class="muted">Các số đo sẽ xuất hiện khi từng bước hoàn tất. Cuộc họp cũ có thể chưa có số đo.</p>' : ''}
@@ -136,10 +137,12 @@ async function saveTranscript(m, retry) {
   controls.forEach(key => {document.getElementById(key).disabled = true;});
   message.textContent = 'Đang lưu…';
   try {
+    const previousMeeting = currentMeeting;
     currentMeeting = await request(`${meetingUrl}/transcript`, {
       method: 'PATCH', headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({text, expected_revision: m.transcript_revision || 0})
     });
+    syncMeetingChat(previousMeeting);
     editorOpen = false;
     notice = {kind: 'info', text: 'Đã lưu transcript chỉnh sửa. Bản ASR gốc được giữ nguyên.'};
     if (retry) await retrySummary();
@@ -167,12 +170,15 @@ async function show() {
     return;
   }
   if (editorOpen) return;
+  const previousMeeting = currentMeeting;
   currentMeeting = m;
+  const previousAudio = document.getElementById('meeting-audio');
   const [label, cls] = meetingStatus(m);
   let body = progressHtml(m);
   if (notice) body += `<p class="meeting-notice ${notice.kind === 'error' ? 'error' : ''}" role="status">${esc(notice.text)}</p>`;
   if (m.status === 'error') body += `<section class="card"><h3>Có lỗi khi xử lý audio</h3><pre class="txt">${esc(m.error)}</pre></section>`;
   if (m.transcript) {
+    body += speakersHtml(m);
     const ready = m.summary && typeof m.summary === 'object';
     const making = m.summary_status === 'processing';
     const error = m.summary_status === 'error' ? `<p class="meeting-notice error" role="alert">${esc(m.summary_error || 'Chưa tạo được biên bản. Hãy thử lại.')}${ready ? ' Biên bản thành công trước đó vẫn được giữ lại.' : ''}</p>` : '';
@@ -182,7 +188,13 @@ async function show() {
   }
   view.innerHTML = `<a class="back" href="meetings.html">${ic('back', 18)} Quay lại danh sách</a>
     <h2 class="h1">${esc(m.title)}</h2><p class="meeting-meta"><span class="badge ${cls}">${esc(label)}</span> ${fmtDate(m.created)} · ${fmtDur(m.sec)}</p><div class="meeting-sections">${body}</div>`;
-  if (m.transcript) setupTranscript(m);
+  if (m.transcript) {
+    const audio = document.getElementById('meeting-audio');
+    if (audio && previousAudio) audio.replaceWith(previousAudio);
+    setupSpeakers();
+    setupTranscript(m);
+  }
+  syncMeetingChat(previousMeeting);
   const retry = document.getElementById('retry-summary');
   if (retry && !retry.disabled) retry.addEventListener('click', retrySummary);
   if (isBusy(m)) timer = setTimeout(show, 3000);

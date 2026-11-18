@@ -14,6 +14,7 @@ meeting_outputs/
 
 # Model CTranslate2 được chuyển từ trọng số PhoWhisper trên máy
 models/ct2/
+models/diarization/
 
 # Audio cục bộ dùng thử, không đưa lên repository
 /*.[mM][pP]3

@@ -33,7 +33,7 @@ def _load_pipeline(model_name):
     return model
 
 
-def transcribe_audio(audio_path, model_size=None):
+def transcribe_audio(audio_path, model_size=None, *, include_segments=False):
     """Chuyển file audio (wav/mp3...) thành văn bản."""
     import soundfile as sf
     import librosa
@@ -53,7 +53,7 @@ def transcribe_audio(audio_path, model_size=None):
         sr = config.SAMPLE_RATE
 
     # Cắt khoảng lặng đầu/cuối: nguyên nhân phổ biến gây lặp từ (hallucination)
-    data, _ = librosa.effects.trim(data, top_db=30)
+    data, bounds = librosa.effects.trim(data, top_db=30)
     if not data.size or not np.any(data):
         raise ValueError("Audio trống hoặc không có tín hiệu âm thanh")
     duration = len(data) / sr
@@ -62,19 +62,27 @@ def transcribe_audio(audio_path, model_size=None):
     start = time.time()
     if config.ASR_BACKEND == "faster-whisper":
         from asr.fast_runtime import transcribe_faster
-        text = transcribe_faster(asr, data)
+        result = transcribe_faster(asr, data, include_segments=True) if include_segments else transcribe_faster(asr, data)
         print(f"[ASR] Transcript complete ({time.time() - start:.1f}s).")
-        return text
-    generate_kwargs = {"no_repeat_ngram_size": 3, "repetition_penalty": 1.3}
-
-    if duration <= 30:
-        result = asr({"array": data, "sampling_rate": sr}, generate_kwargs=generate_kwargs)
+        if not include_segments:
+            return result
+        transcript, rows = result
     else:
-        result = asr(
-            {"array": data, "sampling_rate": sr},
-            return_timestamps=True,
-            generate_kwargs=generate_kwargs,
-        )
-
-    print(f"[ASR] Transcript complete ({time.time() - start:.1f}s).")
-    return result["text"].strip()
+        options = {"return_timestamps": True} if duration > 30 or include_segments else {}
+        result = asr({"array": data, "sampling_rate": sr},
+                     generate_kwargs={"no_repeat_ngram_size": 3, "repetition_penalty": 1.3},
+                     **options)
+        print(f"[ASR] Transcript complete ({time.time() - start:.1f}s).")
+        transcript = result["text"].strip()
+        if not include_segments:
+            return transcript
+        rows = [{"start": start, "end": duration if end is None else end, "text": chunk["text"]}
+                for chunk in result.get("chunks", []) for start, end in [chunk["timestamp"]]
+                if start is not None]
+    # Mốc được tính trên đoạn đã cắt im lặng. Đổi về trục thời gian của file phát.
+    offset = bounds[0] / sr
+    for row in rows:
+        for unit in [row, *row.get("words", [])]:
+            unit["start"] = round(offset + max(0, min(duration, unit["start"])), 3)
+            unit["end"] = round(offset + max(0, min(duration, unit["end"])), 3)
+    return transcript, rows

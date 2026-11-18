@@ -31,6 +31,10 @@ def summarize_with_openai(transcript, api_key, model=None):
 
 
 def summarize_with_gemini(transcript, api_key, model=None, max_retries=None):
+    return generate_gemini_json(build_prompt(transcript), api_key, validate_summary, model=model)
+
+
+def generate_gemini_json(prompt, api_key, validate, *, model=None, system_instruction=None, max_output_tokens=2048):
     from google import genai
     from google.genai import types
 
@@ -43,7 +47,6 @@ def summarize_with_gemini(transcript, api_key, model=None, max_retries=None):
             timeout=20000, retry_options=types.HttpRetryOptions(attempts=1),
         ),
     )
-    prompt = build_prompt(transcript)
     last_error = SummaryError("unknown")
     try:
         for model_name in models:
@@ -54,13 +57,14 @@ def summarize_with_gemini(transcript, api_key, model=None, max_retries=None):
                     model=model_name, contents=prompt,
                     config=types.GenerateContentConfig(
                         response_mime_type="application/json",
+                        system_instruction=system_instruction,
                         thinking_config=types.ThinkingConfig(thinking_level="minimal"),
-                        max_output_tokens=2048,
+                        max_output_tokens=max_output_tokens,
                     ),
                 )
                 if not response.text:
                     raise SummaryError("invalid_response")
-                result = validate_summary(json.loads(response.text))
+                result = validate(json.loads(response.text))
                 print(f"[Gemini] Success: {model_name} - {time.perf_counter() - start:.2f}s")
                 return result
             except Exception as exc:

@@ -221,7 +221,7 @@ class WorkflowTests(unittest.TestCase):
             return original_time(mid, name, started, **fields)
 
         with patch.object(pipeline, "to_wav"), patch.object(pipeline.sf, "info", return_value=SimpleNamespace(duration=36)), \
-                patch.object(pipeline, "transcribe_audio", return_value="Transcript mới"), \
+                patch.object(pipeline, "transcribe_audio", return_value=("Transcript mới", [])), \
                 patch.object(pipeline, "summarize_transcript", return_value=valid_summary()), \
                 patch.object(pipeline, "update_meeting", side_effect=track), \
                 patch.object(pipeline, "record_time", side_effect=track_time):

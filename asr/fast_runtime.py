@@ -77,12 +77,25 @@ def load_faster_model(model_name):
     return model, info
 
 
-def transcribe_faster(model, data):
+def transcribe_faster(model, data, *, include_segments=False):
     # Không bật VAD hoặc chia batch: tránh bỏ đoạn nói nhỏ và tiết kiệm VRAM 4 GB.
     segments, _ = model.transcribe(
         data, language="vi", task="transcribe", beam_size=config.ASR_BEAM_SIZE,
         temperature=0.0, vad_filter=False, condition_on_previous_text=True,
         no_repeat_ngram_size=3, repetition_penalty=1.3,
+        word_timestamps=include_segments,
     )
     # segments là generator; phải duyệt hết mới đo đủ thời gian và nhận đủ transcript.
-    return " ".join(segment.text.strip() for segment in segments if segment.text.strip()).strip()
+    if not include_segments:
+        return " ".join(segment.text.strip() for segment in segments if segment.text.strip()).strip()
+    rows = []
+    for segment in segments:
+        text = segment.text.strip()
+        if not text:
+            continue
+        words = segment.words or []
+        timed_words = [{"start": word.start, "end": word.end, "text": word.word}
+                       for word in words if word.start is not None and word.end is not None]
+        rows.append({"start": segment.start, "end": segment.end, "text": text,
+                     "words": timed_words if len(timed_words) == len(words) else []})
+    return " ".join(row["text"] for row in rows), rows

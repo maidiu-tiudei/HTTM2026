@@ -9,6 +9,7 @@ transformers
 torch
 faster-whisper==1.2.1
 ctranslate2==4.8.5
+sherpa-onnx==2.0.1
 
 # Tóm tắt (dùng Gemini; openai chỉ cần nếu muốn dùng GPT)
 google-genai
