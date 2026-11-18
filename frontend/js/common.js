@@ -67,3 +67,68 @@ function meetingTable(list) {
   }).join('');
   return `<table><thead><tr><th>Cuộc họp</th><th>Ngày</th><th>Người tham gia</th><th>Thời lượng</th><th>Trạng thái</th><th></th></tr></thead><tbody>${rows}</tbody></table>`;
 }
+
+// ---------- Người nói ----------
+const SPK_COLORS = ['#2563eb', '#dc2626', '#16a34a', '#9333ea', '#ea580c'];
+const fmtTime = s => {
+  s = Math.max(0, Math.round(s || 0));
+  return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+};
+
+// Hiển thị transcript theo từng người nói, mỗi người một màu (đã esc nội dung)
+function speakerHtml(text) {
+  const index = {};
+  return String(text || '').split('\n').filter(l => l.trim()).map(line => {
+    const m = line.match(/^\[([^\]]+)\]\s*(.*)$/);
+    if (!m) return `<p class="spk-line">${esc(line)}</p>`;
+    if (!(m[1] in index)) index[m[1]] = Object.keys(index).length;
+    const color = SPK_COLORS[index[m[1]] % SPK_COLORS.length];
+    return `<p class="spk-line"><strong style="color:${color}">${esc(m[1])}:</strong> ${esc(m[2])}</p>`;
+  }).join('');
+}
+
+// Gộp các đoạn liên tiếp của cùng một người thành một lượt lời
+function speakerTurns(m) {
+  const edited = m.transcript_edited;
+  const segs = !edited && Array.isArray(m.segments) ? m.segments : null;
+  const turns = [];
+  if (segs && segs.length && segs.every(s => s.speaker)) {
+    segs.forEach(s => {
+      const last = turns[turns.length - 1];
+      if (last && last.speaker === s.speaker) { last.text += ' ' + s.text; last.end = s.end; }
+      else turns.push({speaker: s.speaker, start: s.start, end: s.end, text: s.text});
+    });
+    return turns;
+  }
+  // Không có segments (hoặc transcript đã chỉnh sửa): đọc nhãn [Người N] trong văn bản
+  String(edited || m.transcript || '').split('\n').forEach(line => {
+    const x = line.match(/^\[([^\]]+)\]\s*(.*)$/);
+    if (x) turns.push({speaker: x[1], text: x[2]});
+  });
+  return turns;
+}
+
+function speakerPanelHtml(m) {
+  const turns = speakerTurns(m);
+  if (!turns.length) {
+    return m.diarization === 'error'
+      ? '<p class="meeting-notice error">Chưa nhận diện được người nói. Transcript vẫn được giữ nguyên.</p>' : '';
+  }
+  const names = [], stats = {};
+  turns.forEach(t => {
+    if (!stats[t.speaker]) { stats[t.speaker] = {turns: 0, sec: 0}; names.push(t.speaker); }
+    stats[t.speaker].turns++;
+    if (t.end != null) stats[t.speaker].sec += t.end - t.start;
+  });
+  const real = names.filter(n => n !== 'Chưa rõ');
+  const color = n => SPK_COLORS[names.indexOf(n) % SPK_COLORS.length];
+  const chips = names.map(n => `<span class="spk-chip" style="border-color:${color(n)};color:${color(n)}">
+    <b>${esc(n)}</b> · ${stats[n].turns} lượt${stats[n].sec ? ' · ' + fmtTime(stats[n].sec) : ''}</span>`).join('');
+  const rows = turns.map(t => `<div class="spk-turn">
+    <span class="spk-time">${t.start != null ? fmtTime(t.start) : ''}</span>
+    <div><strong style="color:${color(t.speaker)}">${esc(t.speaker)}</strong><p>${esc(t.text)}</p></div></div>`).join('');
+  return `<div id="speaker-panel" class="spk-panel">
+    <p class="spk-count">Phát hiện <b>${real.length}</b> người nói · ${turns.length} lượt lời</p>
+    <div class="spk-chips">${chips}</div>
+    <div class="spk-turns">${rows}</div></div>`;
+}

@@ -26,6 +26,7 @@ QUY TẮC BẮT BUỘC:
 - Không tự suy đoán thời lượng từ transcript; nếu không có dữ liệu hãy để "Chưa rõ".
 - Chỉ ghi quyết định, người phụ trách, mốc thời gian thật sự được đề cập. Không tự thêm.
 - Nếu transcript không đủ thông tin cho một trường nào đó, điền "Chưa rõ" thay vì bịa đặt.
+- - Transcript có thể có nhãn người nói dạng [Người 1], [Người 2]. Trường thanh_phan_tham_du chỉ liệt kê các nhãn người nói thật sự xuất hiện trong transcript (ví dụ "Người 1", "Người 2"), không ghi nhân vật hay đối tượng được nhắc đến trong nội dung. Chỉ dùng tên thật nếu người nói tự giới thiệu rõ ràng.
 
 TRANSCRIPT:
 \"\"\"

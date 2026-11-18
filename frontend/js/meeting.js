@@ -50,6 +50,7 @@ function progressHtml(m) {
       <div><dt>Chuẩn hóa audio</dt><dd>${seconds(times.conversion_seconds)}</dd></div>
       <div><dt>Chờ phiên âm</dt><dd>${seconds(times.queue_seconds)}</dd></div>
       <div><dt>Phiên âm</dt><dd>${seconds(times.asr_seconds)}</dd></div>
+      <div><dt>Nhận diện người nói</dt><dd>${seconds(times.diarization_seconds)}</dd></div>
       <div><dt>Tạo biên bản gần nhất</dt><dd>${m.summary_status === 'processing' ? 'Đang đo…' : seconds(times.summary_seconds)}</dd></div>
       <div><dt>Tổng lượt xử lý audio ban đầu</dt><dd>${seconds(times.initial_pipeline_seconds)}</dd></div>
     </dl>${!Object.keys(times).length ? '<p class="muted">Các số đo sẽ xuất hiện khi từng bước hoàn tất. Cuộc họp cũ có thể chưa có số đo.</p>' : ''}
@@ -59,15 +60,17 @@ function progressHtml(m) {
 function transcriptHtml(m) {
   const edited = m.transcript_edited;
   const cleaned = !edited && m.transcript_clean;
+  const hasSpeakers = speakerTurns(m).length > 0;
   return `<section class="card"><div class="transcript-head"><h3>Transcript</h3>
     <button id="edit-transcript" class="btn out" type="button" ${isBusy(m) ? 'disabled' : ''}>Chỉnh sửa transcript</button></div>
     <p class="transcript-note">Bản ASR gốc luôn được giữ lại. Sau khi lưu chỉnh sửa, lần tạo biên bản tiếp theo sẽ dùng bản đã chỉnh.</p>
+    ${speakerPanelHtml(m)}
     <div id="transcript-tabs" class="tab-pair transcript-tabs">
       ${edited ? '<button type="button" class="tab-btn selected" data-transcript="edited">Bản đã chỉnh</button>' : ''}
       ${cleaned ? '<button type="button" class="tab-btn selected" data-transcript="clean">Bản AI chỉnh dấu câu</button>' : ''}
       <button type="button" class="tab-btn ${!edited && !cleaned ? 'selected' : ''}" data-transcript="raw">Bản gốc ASR</button>
     </div>
-    <div id="transcript-content" class="readable-transcript">${esc(edited || cleaned || m.transcript || '')}</div>
+    <div id="transcript-content" class="readable-transcript" ${hasSpeakers && !edited && !cleaned ? 'hidden' : ''}>${speakerHtml(edited || cleaned || m.transcript || '')}</div>
     <div id="transcript-editor" hidden>
       <label for="transcript-input">Nội dung transcript chỉnh sửa</label>
       <textarea id="transcript-input" class="in transcript-input" maxlength="200000">${esc(edited || m.transcript || '')}</textarea>
@@ -77,7 +80,6 @@ function transcriptHtml(m) {
       <button id="save-and-retry" class="btn pri" type="button">Lưu và tạo lại biên bản</button></div>
     </div></section>`;
 }
-
 async function request(url, options) {
   const response = await fetch(url, options);
   const data = await response.json();
@@ -100,7 +102,9 @@ async function retrySummary() {
 function setupTranscript(m) {
   document.querySelectorAll('[data-transcript]').forEach(button => button.addEventListener('click', () => {
     const source = button.dataset.transcript;
-    document.getElementById('transcript-content').textContent = source === 'edited' ? m.transcript_edited : source === 'clean' ? m.transcript_clean : m.transcript;
+    const content = document.getElementById('transcript-content');
+    content.hidden = false;
+    content.innerHTML = speakerHtml(source === 'edited' ? m.transcript_edited : source === 'clean' ? m.transcript_clean : m.transcript);
     document.querySelectorAll('[data-transcript]').forEach(tab => tab.classList.toggle('selected', tab === button));
   }));
   const edit = document.getElementById('edit-transcript');
@@ -111,6 +115,8 @@ function setupTranscript(m) {
     document.getElementById('transcript-editor').hidden = false;
     document.getElementById('transcript-content').hidden = true;
     document.getElementById('transcript-tabs').hidden = true;
+    const sp = document.getElementById('speaker-panel');
+    if (sp) sp.hidden = true;
     edit.hidden = true;
     const retry = document.getElementById('retry-summary');
     if (retry) retry.disabled = true;

@@ -11,7 +11,7 @@ except ImportError:
 # ---- Ghi âm / ASR (Người A) ----
 SAMPLE_RATE = 16000          # PhoWhisper cần 16kHz mono
 CHANNELS = 1
-ASR_MODEL_SIZE = "large"     # tiny / base / small / medium / large
+ASR_MODEL_SIZE = "small"     # tiny / base / small / medium / large
 ASR_MODELS = {
     "tiny": "vinai/PhoWhisper-tiny",
     "base": "vinai/PhoWhisper-base",

@@ -122,4 +122,12 @@ button:disabled{opacity:.55;cursor:not-allowed}
 .transcript-input.in{min-height:300px;height:40vh;line-height:1.9;margin:0}
 .transcript-actions{display:flex;flex-wrap:wrap;gap:12px;justify-content:flex-end;margin-top:20px}
 .edit-message{min-height:26px;margin-top:10px;font-size:14px;color:#a22c24}
+.spk-line { margin: 0 0 10px; line-height: 1.6; }
+.spk-panel{margin:16px 0}
+.spk-count{font-size:15px;margin:0 0 10px}
+.spk-chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.spk-chip{border:1.5px solid;border-radius:999px;padding:4px 12px;font-size:13px}
+.spk-turn{display:flex;gap:14px;padding:10px 0;border-top:1px solid var(--line)}
+.spk-turn p{margin:4px 0 0;line-height:1.6}
+.spk-time{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--mute);min-width:44px;padding-top:2px}
 @media(max-width:650px){.processing-steps{grid-template-columns:1fr 1fr}.transcript-actions .btn{width:100%;justify-content:center}.transcript-head .btn{font-size:14px}}

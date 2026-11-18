@@ -86,3 +86,14 @@ def transcribe_faster(model, data):
     )
     # segments là generator; phải duyệt hết mới đo đủ thời gian và nhận đủ transcript.
     return " ".join(segment.text.strip() for segment in segments if segment.text.strip()).strip()
+
+
+def transcribe_faster_segments(model, data):
+    """Giống transcribe_faster nhưng trả [{'start','end','text'}] (giây, tính từ đầu `data`)."""
+    segments, _ = model.transcribe(
+        data, language="vi", task="transcribe", beam_size=config.ASR_BEAM_SIZE,
+        temperature=0.0, vad_filter=False, condition_on_previous_text=True,
+        no_repeat_ngram_size=3, repetition_penalty=1.3,
+    )
+    return [{"start": float(s.start), "end": float(s.end), "text": s.text.strip()}
+            for s in segments if s.text.strip()]

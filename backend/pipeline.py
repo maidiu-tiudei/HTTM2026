@@ -9,7 +9,9 @@ import imageio_ffmpeg
 import soundfile as sf
 
 import config
-from asr.transcriber import _load_pipeline, transcribe_audio, get_asr_runtime
+from asr.diarizer import diarize, assign_speakers, format_transcript
+from asr.gemini_diarizer import diarize_gemini
+from asr.transcriber import _load_pipeline, transcribe_segments, get_asr_runtime
 from nlp.errors import SummaryError, classify_summary_error
 from nlp.formatter import format_bien_ban
 from nlp.schema import validate_summary
@@ -112,10 +114,23 @@ def process_meeting(mid, src):
             update_meeting(mid, stage=stage)
             started = time.perf_counter()
             try:
-                transcript = transcribe_audio(str(wav))
+                segments = transcribe_segments(str(wav))
                 update_meeting(mid, asr_runtime=get_asr_runtime())
             finally:
                 record_time(mid, "asr_seconds", started)
+            transcript = " ".join(s["text"] for s in segments)
+        if transcript.strip():
+            started = time.perf_counter()
+        # Dùng Gemini nghe audio để tách người nói (không cần pyannote)
+        try:
+            g_segments = diarize_gemini(str(wav))
+            segments = g_segments
+            transcript = format_transcript(segments)
+            update_meeting(mid, segments=segments, diarization="done")
+        except Exception as exc:
+            update_meeting(mid, diarization="error")
+            print(f"[{mid}] Gemini diarization failed: {ascii(str(exc))}")
+        record_time(mid, "diarization_seconds", started)
         if not transcript or not transcript.strip():
             raise RuntimeError("Không nhận diện được lời nói trong file âm thanh")
         ts = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
